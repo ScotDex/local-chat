@@ -26,6 +26,7 @@ export function toTwitchRaw(
     id: msg.id,
     channel,
     userId: user.userId,
+    login: user.userName, // ← new
     displayName: user.displayName,
     color: user.color || null,
     isBroadcaster: user.isBroadcaster,

@@ -12,6 +12,7 @@ function raw(overrides: Partial<TwitchRawMessage> = {}): TwitchRawMessage {
     id: 'msg-1',
     channel: 'erst',
     userId: '45820553',
+    login: 'm1d3v1l',
     displayName: 'm1d3v1l',
     color: '#0026FF',
     isBroadcaster: false,
@@ -82,9 +83,9 @@ test('leaves out-of-range emote positions as plain text', () => {
 });
 
 test('flags known bots', () => {
-  const isKnownBot = (name: string) => name === 'StreamElements';
+  const isKnownBot = (login: string) => login === 'streamelements';
   const msg = mapTwitch(
-    raw({ displayName: 'StreamElements', isMod: true }),
+    raw({ displayName: 'StreamElements', login: 'streamelements', isMod: true }),
     isKnownBot,
   );
   assert.equal(msg.isBot, true);

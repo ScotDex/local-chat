@@ -26,9 +26,7 @@ export class ChatStore {
   constructor(options = {}) {
     this.#maxMessages = options.maxMessages ?? DEFAULT_MAX_MESSAGES;
     this.#showBots = options.showBots ?? false;
-    this.#hiddenNames = new Set(
-      (options.hiddenNames ?? []).map((name) => name.toLowerCase()),
-    );
+    this.#hiddenNames = new Set((options.hiddenNames ?? []).map((name) => name.toLowerCase()));
   }
 
   /** @returns {readonly ChatMessage[]} */
@@ -45,7 +43,9 @@ export class ChatStore {
     switch (event.type) {
       case 'chat':
         if (event.isBot && !this.#showBots) return false;
-        if (this.#hiddenNames.has(event.name.toLowerCase())) return false;
+        if (this.#hiddenNames.has(event.login) || this.#hiddenNames.has(event.name.toLowerCase())) {
+          return false;
+        }
         this.#messages.push(event);
         if (this.#messages.length > this.#maxMessages) this.#messages.shift();
         return true;
@@ -63,9 +63,13 @@ export class ChatStore {
             m.channel === event.channel &&
             m.userId === event.userId,
         );
+      case 'clear':
+        return this.#removeWhere(
+          (m) => m.platform === event.platform && m.channel === event.channel,
+        );
       default:
-        // Event types this overlay doesn't know yet are ignored, so older overlays
-        // keep working when the connector adds new ones (e.g. subs and raids)
+        // Event types this overlay doesn't handle yet (join, part, and future ones
+        // like subs and raids) are ignored, so older overlays keep working
         return false;
     }
   }

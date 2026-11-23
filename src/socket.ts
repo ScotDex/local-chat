@@ -1,7 +1,7 @@
 import type { Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
 import type { PlatformAdapter } from './adapters/adapter.ts';
-import type { ChannelRegistry } from './registry.ts';
+import { CapacityError, type ChannelRegistry } from './registry.ts';
 import { parseSubscription, type Subscription } from './subscription.ts';
 
 export const MAX_CHANNELS_PER_CONNECTION = 5;
@@ -65,8 +65,16 @@ export function createSocketServer(options: SocketServerOptions): Server {
         await registry.subscribe(sub.platform, sub.channel);
       } catch (err) {
         claimed.delete(room);
-        console.error(`[socket] could not subscribe to ${room}`, err);
-        reply({ ok: false, error: 'Could not join that channel' });
+        if (err instanceof CapacityError) {
+          console.warn(`[socket] refused ${room}: ${err.message}`);
+          reply({
+            ok: false,
+            error: 'The server is at capacity right now. Try again later.',
+          });
+        } else {
+          console.error(`[socket] could not subscribe to ${room}`, err);
+          reply({ ok: false, error: 'Could not join that channel' });
+        }
         return;
       }
 

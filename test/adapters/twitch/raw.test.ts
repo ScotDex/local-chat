@@ -31,6 +31,7 @@ test('real message: emote at the end after accented text', () => {
     id: 'real-1',
     channel: 'clemovitch',
     userId: '1',
+    login: 'viewer',
     displayName: 'viewer',
     color: null,
     isBroadcaster: false,

@@ -11,6 +11,7 @@ export interface TwitchRawMessage {
   readonly id: string;
   readonly channel: string;
   readonly userId: string;
+  readonly login: string; // ← new
   readonly displayName: string;
   readonly color: string | null;
   readonly isBroadcaster: boolean;
@@ -78,10 +79,12 @@ export function mapTwitch(
     channel: raw.channel,
     id: raw.id,
     userId: raw.userId,
+    login: raw.login, // ← new
     name: raw.displayName,
     color: raw.color,
+    avatarUrl: null, // ← new: Twitch sends no avatar; the overlay looks it up
     roles: sortRoles(roles),
-    isBot: isKnownBot(raw.displayName),
+    isBot: isKnownBot(raw.login), // ← changed: was raw.displayName
     text: raw.text,
     parts: buildParts(raw.text, raw.emotes),
     timestamp: raw.timestamp,

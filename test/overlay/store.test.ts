@@ -9,9 +9,11 @@ function chat(overrides: Partial<ChatMessage> = {}): ChatMessage {
     platform: 'twitch',
     channel: 'limmy',
     id: 'm1',
+    login: 'viewer',
     userId: 'u1',
     name: 'Viewer',
     color: null,
+    avatarUrl: null,
     roles: [],
     isBot: false,
     text: 'hello',
@@ -77,6 +79,8 @@ test('a ban removes all of that user’s messages in that channel only', () => {
     platform: 'twitch',
     channel: 'limmy',
     userId: 'troll',
+    login: 'troll',
+    durationSeconds: null,
   });
   assert.deepEqual(
     store.messages.map((m) => m.id),
@@ -115,5 +119,22 @@ test('hides listed names regardless of case', () => {
   assert.deepEqual(
     store.messages.map((m) => m.name),
     ['Viewer'],
+  );
+});
+
+
+test('hides by login, so names in any script can be hidden', () => {
+  const store = new ChatStore({ hiddenNames: ['someuser'] });
+  assert.equal(store.apply(chat({ login: 'someuser', name: '日本語の名前' })), false);
+});
+
+test('a clear empties that channel only', () => {
+  const store = new ChatStore();
+  store.apply(chat({ id: 'a' }));
+  store.apply(chat({ id: 'b', channel: 'otherchannel' }));
+  store.apply({ type: 'clear', platform: 'twitch', channel: 'limmy' });
+  assert.deepEqual(
+    store.messages.map((m) => m.id),
+    ['b'],
   );
 });

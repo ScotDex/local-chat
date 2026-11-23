@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ChannelRegistry } from '../src/registry.ts';
+import { CapacityError, ChannelRegistry } from '../src/registry.ts';
 import type { PlatformAdapter } from '../src/adapters/adapter.ts';
 import type { ChatEvent } from '../src/types.ts';
 
@@ -105,4 +105,35 @@ test('dispose cancels pending leaves', async (t) => {
   registry.dispose();
   t.mock.timers.tick(60_000);
   assert.deepEqual(adapter.leaves, []);
+});
+
+test('refuses a new channel once the limit is reached', async () => {
+  const adapter = new FakeAdapter();
+  const registry = new ChannelRegistry([adapter], { maxChannels: 2 });
+  await registry.subscribe('twitch', 'a');
+  await registry.subscribe('twitch', 'b');
+  await assert.rejects(registry.subscribe('twitch', 'c'), CapacityError);
+  assert.deepEqual(adapter.joins, ['a', 'b']);
+});
+
+test('a channel already joined can still be subscribed at the limit', async () => {
+  const adapter = new FakeAdapter();
+  const registry = new ChannelRegistry([adapter], { maxChannels: 1 });
+  await registry.subscribe('twitch', 'a');
+  await registry.subscribe('twitch', 'a');
+  assert.deepEqual(adapter.joins, ['a']);
+});
+
+test('a leave frees a place under the limit', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const adapter = new FakeAdapter();
+  const registry = new ChannelRegistry([adapter], {
+    maxChannels: 1,
+    graceMs: 60_000,
+  });
+  await registry.subscribe('twitch', 'a');
+  registry.unsubscribe('twitch', 'a');
+  t.mock.timers.tick(60_000);
+  await registry.subscribe('twitch', 'b');
+  assert.deepEqual(adapter.joins, ['a', 'b']);
 });

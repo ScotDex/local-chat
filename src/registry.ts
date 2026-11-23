@@ -2,14 +2,24 @@ import type { Platform } from './types.ts';
 import type { PlatformAdapter } from './adapters/adapter.ts';
 
 const DEFAULT_GRACE_MS = 60_000;
+const DEFAULT_MAX_CHANNELS = 100;
+
+export class CapacityError extends Error {
+  constructor(limit: number) {
+    super(`Channel limit of ${limit} reached`);
+    this.name = 'CapacityError';
+  }
+}
 
 export interface RegistryOptions {
   graceMs?: number;
+  maxChannels?: number;
 }
 
 export class ChannelRegistry {
   readonly #adapters: ReadonlyMap<Platform, PlatformAdapter>;
   readonly #graceMs: number;
+  readonly #maxChannels: number;
   readonly #watchers = new Map<string, number>();
   readonly #joins = new Map<string, Promise<void>>();
   readonly #leaveTimers = new Map<string, NodeJS.Timeout>();
@@ -22,11 +32,15 @@ export class ChannelRegistry {
       adapters.map((a) => [a.platform, a]),
     );
     this.#graceMs = options.graceMs ?? DEFAULT_GRACE_MS;
+    this.#maxChannels = options.maxChannels ?? DEFAULT_MAX_CHANNELS;
   }
 
   /** Expects a channel name already validated and normalised for its platform. */
   async subscribe(platform: Platform, channel: string): Promise<void> {
     const key = `${platform}:${channel}`;
+    if (!this.#joins.has(key) && this.#joins.size >= this.#maxChannels) {
+      throw new CapacityError(this.#maxChannels);
+    }
     this.#cancelLeave(key);
     this.#watchers.set(key, (this.#watchers.get(key) ?? 0) + 1);
     try {
