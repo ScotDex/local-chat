@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import type { ChatMessage as TwurpleChatMessage } from '@twurple/chat';
+import type {
+  ChatMessage as TwurpleChatMessage,
+  ClearChat,
+} from '@twurple/chat';
 import {
   TwitchAdapter,
   type EmoteSource,
@@ -20,7 +23,8 @@ class FakeChat implements TwitchChatSource {
   quitCalled = false;
   joined: string[] = [];
   parted: string[] = [];
-  #handler: MessageHandler | null = null;
+  // `never[]` lets one map hold handlers with different parameter lists
+  readonly #handlers = new Map<string, (...args: never[]) => void>();
 
   connect(): void {
     this.connected = true;
@@ -35,12 +39,48 @@ class FakeChat implements TwitchChatSource {
     this.parted.push(channel);
   }
   onMessage(handler: MessageHandler): void {
-    this.#handler = handler;
+    this.#handlers.set('message', handler);
+  }
+  onMessageRemove(handler: (channel: string, messageId: string) => void): void {
+    this.#handlers.set('remove', handler);
+  }
+  onBan(
+    handler: (channel: string, user: string, msg: ClearChat) => void,
+  ): void {
+    this.#handlers.set('ban', handler);
+  }
+  onTimeout(
+    handler: (
+      channel: string,
+      user: string,
+      duration: number,
+      msg: ClearChat,
+    ) => void,
+  ): void {
+    this.#handlers.set('timeout', handler);
+  }
+  onChatClear(handler: (channel: string) => void): void {
+    this.#handlers.set('clear', handler);
+  }
+  onJoin(handler: (channel: string, user: string) => void): void {
+    this.#handlers.set('join', handler);
+  }
+  onPart(handler: (channel: string, user: string) => void): void {
+    this.#handlers.set('part', handler);
+  }
+
+  /** Test-only: simulate Twitch firing an event. */
+  fire(event: string, ...args: unknown[]): void {
+    const handler = this.#handlers.get(event) as
+      ((...args: unknown[]) => void) | undefined;
+    handler?.(...args);
   }
   receive(channel: string, text: string, msg: TwurpleChatMessage): void {
-    this.#handler?.(channel, 'user', text, msg);
+    this.fire('message', channel, 'user', text, msg);
   }
 }
+
+const clearChat = { targetUserId: 'id-troll' } as unknown as ClearChat;
 
 // Twurple's message is a class instance; the adapter only reads these fields
 function fakeMessage(
@@ -130,4 +170,64 @@ test("leaving a channel forgets that channel's emotes", async () => {
   chat.receive('ohnepixel', 'hi', fakeMessage('43683025'));
   await adapter.leave('ohnepixel');
   assert.deepEqual(forgotten, ['43683025']);
+});
+
+test('a removed message becomes a delete event', () => {
+  const { chat, events } = setup();
+  chat.fire('remove', 'limmy', 'msg-1');
+  assert.deepEqual(events, [
+    {
+      type: 'delete',
+      platform: 'twitch',
+      channel: 'limmy',
+      messageId: 'msg-1',
+    },
+  ]);
+});
+
+test('a ban is permanent; a timeout carries its duration', () => {
+  const { chat, events } = setup();
+  chat.fire('ban', 'limmy', 'troll', clearChat);
+  chat.fire('timeout', 'limmy', 'spammer', 600, clearChat);
+  assert.equal(events[0]?.type === 'ban' && events[0].durationSeconds, null);
+  assert.equal(events[1]?.type === 'ban' && events[1].durationSeconds, 600);
+});
+
+test('a chat clear becomes a clear event', () => {
+  const { chat, events } = setup();
+  chat.fire('clear', 'limmy');
+  assert.deepEqual(events, [
+    { type: 'clear', platform: 'twitch', channel: 'limmy' },
+  ]);
+});
+
+test('joins and parts become membership events, with bots flagged', () => {
+  const chat = new FakeChat();
+  const adapter = new TwitchAdapter(chat, {
+    isKnownBot: (login) => login === 'streamelements',
+  });
+  const events: ChatEvent[] = [];
+  adapter.onEvent((event) => events.push(event));
+
+  chat.fire('join', 'limmy', 'pilot');
+  chat.fire('join', 'limmy', 'streamelements');
+  chat.fire('part', 'limmy', 'pilot');
+
+  assert.deepEqual(events, [
+    {
+      type: 'join',
+      platform: 'twitch',
+      channel: 'limmy',
+      login: 'pilot',
+      isBot: false,
+    },
+    {
+      type: 'join',
+      platform: 'twitch',
+      channel: 'limmy',
+      login: 'streamelements',
+      isBot: true,
+    },
+    { type: 'part', platform: 'twitch', channel: 'limmy', login: 'pilot' },
+  ]);
 });

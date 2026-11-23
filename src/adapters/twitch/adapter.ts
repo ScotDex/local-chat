@@ -1,12 +1,14 @@
 import { ChatClient } from '@twurple/chat';
-import type { ChatMessage as TwurpleChatMessage } from '@twurple/chat';
+import type {
+  ChatMessage as TwurpleChatMessage,
+  ClearChat,
+} from '@twurple/chat';
 import type { ChatEvent } from '../../types.ts';
 import type { PlatformAdapter } from '../adapter.ts';
 import { enrichParts, type EmoteLookup } from '../../emotes/enrich.ts';
 import { mapTwitch } from './map.ts';
 import { toTwitchRaw } from './raw.ts';
 
-/** The parts of Twurple's ChatClient this adapter uses, so tests can supply a fake. */
 export interface TwitchChatSource {
   connect(): void;
   quit(): void;
@@ -20,6 +22,23 @@ export interface TwitchChatSource {
       msg: TwurpleChatMessage,
     ) => void,
   ): unknown;
+  onMessageRemove(
+    handler: (channel: string, messageId: string) => void,
+  ): unknown;
+  onBan(
+    handler: (channel: string, user: string, msg: ClearChat) => void,
+  ): unknown;
+  onTimeout(
+    handler: (
+      channel: string,
+      user: string,
+      duration: number,
+      msg: ClearChat,
+    ) => void,
+  ): unknown;
+  onChatClear(handler: (channel: string) => void): unknown;
+  onJoin(handler: (channel: string, user: string) => void): unknown;
+  onPart(handler: (channel: string, user: string) => void): unknown;
 }
 
 /** Where third-party emotes come from. EmoteCache already fits this shape. */
@@ -38,6 +57,11 @@ const NO_EMOTES: EmoteSource = {
   forget: () => undefined,
 };
 
+/** @param channel Twitch channel name, as Twurple reports it */
+function onTwitch(channel: string) {
+  return { platform: 'twitch', channel } as const;
+}
+
 export class TwitchAdapter implements PlatformAdapter {
   readonly platform = 'twitch';
   readonly #client: TwitchChatSource;
@@ -51,12 +75,56 @@ export class TwitchAdapter implements PlatformAdapter {
     this.#client = client;
     this.#isKnownBot = options.isKnownBot;
     this.#emotes = options.emotes ?? NO_EMOTES;
-    this.#client.onMessage((channel, _user, text, msg) => {
-      try {
-        this.#handleMessage(channel, text, msg);
-      } catch (err) {
-        console.error(`[twitch] failed to handle a message in ${channel}`, err);
-      }
+
+    client.onMessage((channel, _user, text, msg) => {
+      this.#safely(channel, () => this.#handleMessage(channel, text, msg));
+    });
+    client.onMessageRemove((channel, messageId) => {
+      this.#safely(channel, () =>
+        this.#emit({ type: 'delete', ...onTwitch(channel), messageId }),
+      );
+    });
+    client.onBan((channel, user, msg) => {
+      this.#safely(channel, () =>
+        this.#emit({
+          type: 'ban',
+          ...onTwitch(channel),
+          userId: msg.targetUserId ?? '',
+          login: user,
+          durationSeconds: null,
+        }),
+      );
+    });
+    client.onTimeout((channel, user, duration, msg) => {
+      this.#safely(channel, () =>
+        this.#emit({
+          type: 'ban',
+          ...onTwitch(channel),
+          userId: msg.targetUserId ?? '',
+          login: user,
+          durationSeconds: duration,
+        }),
+      );
+    });
+    client.onChatClear((channel) => {
+      this.#safely(channel, () =>
+        this.#emit({ type: 'clear', ...onTwitch(channel) }),
+      );
+    });
+    client.onJoin((channel, user) => {
+      this.#safely(channel, () =>
+        this.#emit({
+          type: 'join',
+          ...onTwitch(channel),
+          login: user,
+          isBot: this.#isKnownBot(user),
+        }),
+      );
+    });
+    client.onPart((channel, user) => {
+      this.#safely(channel, () =>
+        this.#emit({ type: 'part', ...onTwitch(channel), login: user }),
+      );
     });
   }
 
@@ -86,6 +154,15 @@ export class TwitchAdapter implements PlatformAdapter {
     this.#handlers.push(handler);
   }
 
+  /** One bad event is logged and skipped; it never stops the others. */
+  #safely(channel: string, work: () => void): void {
+    try {
+      work();
+    } catch (err) {
+      console.error(`[twitch] failed to handle an event in ${channel}`, err);
+    }
+  }
+
   #handleMessage(channel: string, text: string, msg: TwurpleChatMessage): void {
     const event = mapTwitch(toTwitchRaw(channel, text, msg), this.#isKnownBot);
     const channelId = msg.channelId;
@@ -109,7 +186,10 @@ export function createTwitchAdapter(
   options: TwitchAdapterOptions,
 ): TwitchAdapter {
   return new TwitchAdapter(
-    new ChatClient({ rejoinChannelsOnReconnect: true }),
+    new ChatClient({
+      rejoinChannelsOnReconnect: true,
+      requestMembershipEvents: true,
+    }),
     options,
   );
 }

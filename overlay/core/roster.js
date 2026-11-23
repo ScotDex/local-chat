@@ -81,6 +81,12 @@ export class Roster {
       .slice(0, this.#maxEntries);
   }
 
+  /** Forget everyone, e.g. when the connection drops and presence can't be trusted. */
+  clear() {
+    this.#entries.clear();
+    this.#present.clear();
+  }
+
   /**
    * @param {ChatEvent} event
    * @returns {boolean} Whether the roster changed.
