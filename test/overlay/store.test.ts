@@ -107,3 +107,13 @@ test('unknown event types are ignored', () => {
   } as unknown as ChatEvent;
   assert.equal(store.apply(future), false);
 });
+
+test('hides listed names regardless of case', () => {
+  const store = new ChatStore({ hiddenNames: ['someuser'] });
+  assert.equal(store.apply(chat({ name: 'SomeUser' })), false);
+  assert.equal(store.apply(chat({ id: 'b', name: 'Viewer' })), true);
+  assert.deepEqual(
+    store.messages.map((m) => m.name),
+    ['Viewer'],
+  );
+});

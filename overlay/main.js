@@ -59,10 +59,10 @@ if (!settings.roster) {
 if (!settings.portraits) windowEl.classList.add('no-portrait');
 windowEl.classList.add('active');
 
-// ---------- Chat list ----------
 const store = new ChatStore({
   maxMessages: settings.maxMessages,
   showBots: settings.showBots,
+  hiddenNames: settings.hiddenNames,
 });
 
 /** @type {Map<string, HTMLElement>} */

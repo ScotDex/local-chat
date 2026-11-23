@@ -7,6 +7,7 @@
  * @typedef {object} StoreOptions
  * @property {number} [maxMessages] How many lines to keep (oldest dropped first).
  * @property {boolean} [showBots] Keep bot messages; hidden by default.
+ * @property {readonly string[]} [hiddenNames] Extra names to hide, matched without regard to case.
  */
 
 const DEFAULT_MAX_MESSAGES = 50;
@@ -18,11 +19,16 @@ export class ChatStore {
   #maxMessages;
   /** @type {boolean} */
   #showBots;
+  /** @type {Set<string>} */
+  #hiddenNames;
 
   /** @param {StoreOptions} [options] */
   constructor(options = {}) {
     this.#maxMessages = options.maxMessages ?? DEFAULT_MAX_MESSAGES;
     this.#showBots = options.showBots ?? false;
+    this.#hiddenNames = new Set(
+      (options.hiddenNames ?? []).map((name) => name.toLowerCase()),
+    );
   }
 
   /** @returns {readonly ChatMessage[]} */
@@ -39,6 +45,7 @@ export class ChatStore {
     switch (event.type) {
       case 'chat':
         if (event.isBot && !this.#showBots) return false;
+        if (this.#hiddenNames.has(event.name.toLowerCase())) return false;
         this.#messages.push(event);
         if (this.#messages.length > this.#maxMessages) this.#messages.shift();
         return true;
