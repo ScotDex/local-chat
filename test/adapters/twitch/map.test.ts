@@ -85,7 +85,11 @@ test('leaves out-of-range emote positions as plain text', () => {
 test('flags known bots', () => {
   const isKnownBot = (login: string) => login === 'streamelements';
   const msg = mapTwitch(
-    raw({ displayName: 'StreamElements', login: 'streamelements', isMod: true }),
+    raw({
+      displayName: 'StreamElements',
+      login: 'streamelements',
+      isMod: true,
+    }),
     isKnownBot,
   );
   assert.equal(msg.isBot, true);

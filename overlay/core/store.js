@@ -26,7 +26,9 @@ export class ChatStore {
   constructor(options = {}) {
     this.#maxMessages = options.maxMessages ?? DEFAULT_MAX_MESSAGES;
     this.#showBots = options.showBots ?? false;
-    this.#hiddenNames = new Set((options.hiddenNames ?? []).map((name) => name.toLowerCase()));
+    this.#hiddenNames = new Set(
+      (options.hiddenNames ?? []).map((name) => name.toLowerCase()),
+    );
   }
 
   /** @returns {readonly ChatMessage[]} */
@@ -43,7 +45,10 @@ export class ChatStore {
     switch (event.type) {
       case 'chat':
         if (event.isBot && !this.#showBots) return false;
-        if (this.#hiddenNames.has(event.login) || this.#hiddenNames.has(event.name.toLowerCase())) {
+        if (
+          this.#hiddenNames.has(event.login) ||
+          this.#hiddenNames.has(event.name.toLowerCase())
+        ) {
           return false;
         }
         this.#messages.push(event);

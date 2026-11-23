@@ -53,6 +53,8 @@ export interface ClearEvent extends EventBase {
 export interface JoinEvent extends EventBase {
   readonly type: 'join';
   readonly login: string;
+  /** Set from the connector's known-bot list. */
+  readonly isBot: boolean;
 }
 
 /** A viewer left (Twitch only). */
@@ -61,4 +63,5 @@ export interface PartEvent extends EventBase {
   readonly login: string;
 }
 
-export type ChatEvent = ChatMessage | DeleteEvent | BanEvent | ClearEvent | JoinEvent | PartEvent;
+export type ChatEvent =
+  ChatMessage | DeleteEvent | BanEvent | ClearEvent | JoinEvent | PartEvent;

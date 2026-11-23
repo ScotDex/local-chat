@@ -122,10 +122,12 @@ test('hides listed names regardless of case', () => {
   );
 });
 
-
 test('hides by login, so names in any script can be hidden', () => {
   const store = new ChatStore({ hiddenNames: ['someuser'] });
-  assert.equal(store.apply(chat({ login: 'someuser', name: '日本語の名前' })), false);
+  assert.equal(
+    store.apply(chat({ login: 'someuser', name: '日本語の名前' })),
+    false,
+  );
 });
 
 test('a clear empties that channel only', () => {
