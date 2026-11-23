@@ -1,0 +1,11 @@
+services:
+  chat-connector:
+    build: .
+    image: chat-connector
+    container_name: chat-connector
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+    ports:
+      - '127.0.0.1:3000:3000'
+    stop_grace_period: 15s
