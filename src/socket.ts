@@ -35,7 +35,7 @@ export function createSocketServer(options: SocketServerOptions): Server {
   }
 
   io.on('connection', (socket) => {
-    const claimed = new Set<string>(); 
+    const claimed = new Set<string>();
     const active = new Map<string, Subscription>();
 
     socket.on('subscribe', async (input: unknown, ack: unknown) => {
