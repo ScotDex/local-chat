@@ -4,6 +4,9 @@ import type { PlatformAdapter } from './adapters/adapter.ts';
 const DEFAULT_GRACE_MS = 60_000;
 const DEFAULT_MAX_CHANNELS = 100;
 
+/** Told when the connector has actually left a channel, after the grace period. */
+export type LeaveListener = (platform: Platform, channel: string) => void;
+
 export class CapacityError extends Error {
   constructor(limit: number) {
     super(`Channel limit of ${limit} reached`);
@@ -14,12 +17,14 @@ export class CapacityError extends Error {
 export interface RegistryOptions {
   graceMs?: number;
   maxChannels?: number;
+  onLeave?: LeaveListener;
 }
 
 export class ChannelRegistry {
   readonly #adapters: ReadonlyMap<Platform, PlatformAdapter>;
   readonly #graceMs: number;
   readonly #maxChannels: number;
+  readonly #onLeave: LeaveListener | undefined;
   readonly #watchers = new Map<string, number>();
   readonly #joins = new Map<string, Promise<void>>();
   readonly #leaveTimers = new Map<string, NodeJS.Timeout>();
@@ -33,6 +38,7 @@ export class ChannelRegistry {
     );
     this.#graceMs = options.graceMs ?? DEFAULT_GRACE_MS;
     this.#maxChannels = options.maxChannels ?? DEFAULT_MAX_CHANNELS;
+    this.#onLeave = options.onLeave;
   }
 
   /** Expects a channel name already validated and normalised for its platform. */
@@ -85,6 +91,7 @@ export class ChannelRegistry {
   #leaveNow(platform: Platform, channel: string, key: string): void {
     this.#leaveTimers.delete(key);
     this.#joins.delete(key);
+    this.#onLeave?.(platform, channel);
     this.#adapter(platform)
       .leave(channel)
       .catch((err: unknown) =>

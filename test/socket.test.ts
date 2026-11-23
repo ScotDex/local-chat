@@ -10,7 +10,8 @@ import {
   MAX_CHANNELS_PER_CONNECTION,
 } from '../src/socket.ts';
 import { ChannelRegistry } from '../src/registry.ts';
-import type { ChatMessage } from '../src/types.ts';
+import { Presence } from '../src/presence.ts';
+import type { ChatMessage, JoinEvent } from '../src/types.ts';
 import { FakeAdapter } from './helpers/fakeAdapter.ts';
 
 const twitch = (channel: string) => ({ platform: 'twitch', channel });
@@ -37,8 +38,14 @@ function chatIn(channel: string): ChatMessage {
 async function startServer(t: TestContext) {
   const adapter = new FakeAdapter();
   const registry = new ChannelRegistry([adapter], { graceMs: 0 });
+  const presence = new Presence();
   const httpServer = createServer();
-  const io = createSocketServer({ httpServer, registry, adapters: [adapter] });
+  const io = createSocketServer({
+    httpServer,
+    registry,
+    adapters: [adapter],
+    presence,
+  });
   httpServer.listen(0);
   await once(httpServer, 'listening');
   const { port } = httpServer.address() as AddressInfo;
@@ -136,3 +143,28 @@ test('disconnecting releases the channel', async (t) => {
   await delay(100);
   assert.deepEqual(adapter.leaves, ['limmy']);
 });
+
+test(
+  'a late subscriber is told who is already in the channel',
+  { timeout: 2000 },
+  async (t) => {
+    const { adapter, client } = await startServer(t);
+    await client().emitWithAck('subscribe', twitch('limmy'));
+    const lurker: JoinEvent = {
+      type: 'join',
+      platform: 'twitch',
+      channel: 'limmy',
+      login: 'lurker',
+      isBot: false,
+    };
+    adapter.emit(lurker);
+
+    const late = client();
+    const received = new Promise<JoinEvent>((resolve) =>
+      late.once('chat-event', resolve),
+    );
+    await late.emitWithAck('subscribe', twitch('limmy'));
+
+    assert.deepEqual(await received, lurker);
+  },
+);

@@ -137,3 +137,40 @@ test('a leave frees a place under the limit', async (t) => {
   await registry.subscribe('twitch', 'b');
   assert.deepEqual(adapter.joins, ['a', 'b']);
 });
+
+test('onLeave is told once the channel is actually left', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const left: string[] = [];
+  const registry = new ChannelRegistry([new FakeAdapter()], {
+    graceMs: 60_000,
+    onLeave: (platform, channel) => {
+      left.push(`${platform}:${channel}`);
+    },
+  });
+  await registry.subscribe('twitch', 'limmy');
+  registry.unsubscribe('twitch', 'limmy');
+
+  t.mock.timers.tick(59_999);
+  assert.deepEqual(left, []);
+
+  t.mock.timers.tick(1);
+  assert.deepEqual(left, ['twitch:limmy']);
+});
+
+test('onLeave is not told when a resubscribe cancels the leave', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const left: string[] = [];
+  const registry = new ChannelRegistry([new FakeAdapter()], {
+    graceMs: 60_000,
+    onLeave: (platform, channel) => {
+      left.push(`${platform}:${channel}`);
+    },
+  });
+  await registry.subscribe('twitch', 'limmy');
+  registry.unsubscribe('twitch', 'limmy');
+  t.mock.timers.tick(30_000);
+  await registry.subscribe('twitch', 'limmy');
+  t.mock.timers.tick(60_000);
+
+  assert.deepEqual(left, []);
+});

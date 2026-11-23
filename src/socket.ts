@@ -1,6 +1,7 @@
 import type { Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
 import type { PlatformAdapter } from './adapters/adapter.ts';
+import type { Presence } from './presence.ts';
 import { CapacityError, type ChannelRegistry } from './registry.ts';
 import { parseSubscription, type Subscription } from './subscription.ts';
 
@@ -13,6 +14,7 @@ export interface SocketServerOptions {
   httpServer: HttpServer;
   registry: ChannelRegistry;
   adapters: readonly PlatformAdapter[];
+  presence: Presence;
 }
 
 function roomOf(target: Subscription): string {
@@ -24,12 +26,13 @@ function toAck(ack: unknown): Ack {
 }
 
 export function createSocketServer(options: SocketServerOptions): Server {
-  const { registry } = options;
+  const { registry, presence } = options;
 
   const io = new Server(options.httpServer, { cors: { origin: '*' } });
 
   for (const adapter of options.adapters) {
     adapter.onEvent((event) => {
+      presence.apply(event);
       io.to(roomOf(event)).emit('chat-event', event);
     });
   }
@@ -86,6 +89,10 @@ export function createSocketServer(options: SocketServerOptions): Server {
       active.set(room, sub);
       void socket.join(room);
       reply({ ok: true });
+      // Joined first, so nobody arriving now can be missed; the overlay ignores repeats
+      for (const event of presence.snapshot(sub.platform, sub.channel)) {
+        socket.emit('chat-event', event);
+      }
     });
 
     socket.on('unsubscribe', (input: unknown, ack: unknown) => {

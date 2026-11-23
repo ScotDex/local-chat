@@ -3,6 +3,7 @@ import { loadConfig } from './config.ts';
 import { createHttpApp } from './http.ts';
 import { createSocketServer } from './socket.ts';
 import { ChannelRegistry } from './registry.ts';
+import { Presence } from './presence.ts';
 import { createTwitchAdapter } from './adapters/twitch/adapter.ts';
 import { isKnownBot } from './bots.ts';
 import { EmoteCache } from './emotes/cache.ts';
@@ -15,9 +16,12 @@ const startedAt = Date.now();
 const adapters = [
   createTwitchAdapter({ isKnownBot, emotes: new EmoteCache() }),
 ];
-const registry = new ChannelRegistry(adapters);
+const presence = new Presence();
+const registry = new ChannelRegistry(adapters, {
+  onLeave: (platform, channel) => presence.forget(platform, channel),
+});
 const httpServer = createServer(createHttpApp({ startedAt }));
-const io = createSocketServer({ httpServer, registry, adapters });
+const io = createSocketServer({ httpServer, registry, adapters, presence });
 
 for (const adapter of adapters) await adapter.start();
 httpServer.listen(config.port, () => {

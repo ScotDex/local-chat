@@ -9,6 +9,10 @@ const KNOWN_BOTS = [
   'soundalerts',
   'kofistreambot',
   'botrixoficial',
+  'tangiabot',
+  'frostytools',
+  'eve2twitch',
+  'eve2stream',
 ];
 
 export function createBotMatcher(
