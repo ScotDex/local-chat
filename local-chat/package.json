@@ -1,0 +1,33 @@
+{
+  "name": "chat-connector",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Central chat connector for Twitch, Kick and YouTube stream overlays",
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.ts",
+    "check": "tsc",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --test \"test/**/*.test.ts\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.15.0",
+    "prettier": "^3.10.1",
+    "socket.io-client": "^4.8.4",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.73.0"
+  },
+  "dependencies": {
+    "@twurple/chat": "^8.2.0",
+    "express": "^5.3.0",
+    "socket.io": "^4.8.4"
+  }
+}
