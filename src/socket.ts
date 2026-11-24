@@ -32,8 +32,7 @@ export function createSocketServer(options: SocketServerOptions): Server {
 
   for (const adapter of options.adapters) {
     adapter.onEvent((event) => {
-      if (event.type === 'join')
-      presence.apply(event);
+      if (event.type === 'join') presence.apply(event);
       io.to(roomOf(event)).emit('chat-event', event);
     });
   }
