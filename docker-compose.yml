@@ -8,7 +8,6 @@ services:
       PORT: 3000
     env_file:
       - path: .env
-        required: false
     ports:
       - '127.0.0.1:3000:3000'
     stop_grace_period: 15s
