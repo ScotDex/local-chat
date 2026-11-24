@@ -19,5 +19,5 @@ export default defineConfig(
       'no-undef': 'off', // TypeScript checks undefined names in @ts-check files, with browser types
     },
   },
-  { ignores: ['node_modules/'] },
+  { ignores: ['node_modules/', 'overlay/vendor/'] },
 );

@@ -16,10 +16,10 @@ import {
 /** @typedef {import('./core/roster.js').RosterEntry} RosterEntry */
 /** @typedef {import('../src/types.ts').ChatMessage} ChatMessage */
 
-// While developing, the connector serves this page itself, so it is the same origin.
-// Before deploying to the overlay's own domain, this must point at the connector.
-const CONNECTOR_URL = location.origin;
-const SOCKET_IO_CLIENT = '/socket.io/socket.io.esm.min.js';
+const CONNECTOR_URL = location.pathname.startsWith('/overlay/')
+  ? location.origin
+  : 'https://chat.socketkill.com';
+const SOCKET_IO_CLIENT = './vendor/socket.io.esm.min.js';
 
 /**
  * @param {string} id
