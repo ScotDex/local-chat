@@ -1,3 +1,8 @@
+export interface TlsFiles {
+  readonly certFile: string;
+  readonly keyFile: string;
+}
+
 export interface Config {
   readonly port: number;
   readonly kick: {
@@ -7,6 +12,8 @@ export interface Config {
   readonly youtube: {
     readonly apiKey: string;
   };
+  /** Certificate and key paths to serve HTTPS; null means plain HTTP. */
+  readonly tls: TlsFiles | null;
 }
 
 function required(
@@ -21,6 +28,22 @@ function required(
   }
   return value;
 }
+
+function optional(env: NodeJS.ProcessEnv, name: string): string | null {
+  const value = env[name]?.trim();
+  return value ? value : null;
+}
+
+function loadTls(env: NodeJS.ProcessEnv): TlsFiles | null {
+  const certFile = optional(env, 'TLS_CERT_FILE');
+  const keyFile = optional(env, 'TLS_KEY_FILE');
+  if (certFile && keyFile) return { certFile, keyFile };
+  if (certFile || keyFile) {
+    throw new Error('TLS_CERT_FILE and TLS_KEY_FILE must be set together');
+  }
+  return null;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv): Config {
   const missing: string[] = [];
 
@@ -33,6 +56,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     youtube: {
       apiKey: required(env, 'YOUTUBE_API_KEY', missing),
     },
+    tls: loadTls(env),
   };
 
   if (missing.length > 0) {

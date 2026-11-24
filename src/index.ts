@@ -1,4 +1,6 @@
-import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
+import { createServer as createHttpServer } from 'node:http';
+import { createServer as createHttpsServer } from 'node:https';
 import { loadConfig } from './config.ts';
 import { createHttpApp } from './http.ts';
 import { createSocketServer } from './socket.ts';
@@ -20,12 +22,24 @@ const presence = new Presence();
 const registry = new ChannelRegistry(adapters, {
   onLeave: (platform, channel) => presence.forget(platform, channel),
 });
-const httpServer = createServer(createHttpApp({ startedAt }));
+
+const app = createHttpApp({ startedAt });
+const httpServer = config.tls
+  ? createHttpsServer(
+      {
+        cert: readFileSync(config.tls.certFile),
+        key: readFileSync(config.tls.keyFile),
+      },
+      app,
+    )
+  : createHttpServer(app);
+const protocol = config.tls ? 'https' : 'http';
+
 const io = createSocketServer({ httpServer, registry, adapters, presence });
 
 for (const adapter of adapters) await adapter.start();
 httpServer.listen(config.port, () => {
-  console.log(`[connector] listening on port ${config.port}`);
+  console.log(`[connector] listening on port ${config.port} (${protocol})`);
 });
 
 let shuttingDown = false;

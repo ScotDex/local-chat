@@ -35,3 +35,32 @@ test('treats a whitespace-only value as missing', () => {
 test('rejects a PORT that is not a whole number', () => {
   assert.throws(() => loadConfig({ ...validEnv, PORT: 'abc' }), /PORT must be/);
 });
+
+const kickAndYoutube = {
+  KICK_CLIENT_ID: 'id',
+  KICK_CLIENT_SECRET: 'secret',
+  YOUTUBE_API_KEY: 'key',
+};
+
+test('without TLS settings, the server runs plain HTTP', () => {
+  assert.equal(loadConfig(kickAndYoutube).tls, null);
+});
+
+test('with both TLS settings, their paths are used', () => {
+  const config = loadConfig({
+    ...kickAndYoutube,
+    TLS_CERT_FILE: '/ssl/cert.pem',
+    TLS_KEY_FILE: '/ssl/cert.key',
+  });
+  assert.deepEqual(config.tls, {
+    certFile: '/ssl/cert.pem',
+    keyFile: '/ssl/cert.key',
+  });
+});
+
+test('only one TLS setting is refused', () => {
+  assert.throws(
+    () => loadConfig({ ...kickAndYoutube, TLS_CERT_FILE: '/ssl/cert.pem' }),
+    /must be set together/,
+  );
+});
