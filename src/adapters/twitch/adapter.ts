@@ -137,7 +137,9 @@ export class TwitchAdapter implements PlatformAdapter {
   }
 
   async join(channel: string): Promise<void> {
+    console.log(`[debug] joining ${channel}`);
     await this.#client.join(channel.toLowerCase());
+    console.log(`[debug] joined ${channel}`);
   }
 
   async leave(channel: string): Promise<void> {
@@ -185,11 +187,17 @@ export class TwitchAdapter implements PlatformAdapter {
 export function createTwitchAdapter(
   options: TwitchAdapterOptions,
 ): TwitchAdapter {
-  return new TwitchAdapter(
-    new ChatClient({
-      rejoinChannelsOnReconnect: true,
-      requestMembershipEvents: true,
-    }),
-    options,
-  );
+  const client = new ChatClient({
+    rejoinChannelsOnReconnect: true,
+    requestMembershipEvents: true,
+  });
+  let rawJoins = 0;
+  client.irc.onAnyMessage((msg) => {
+    if (msg.command !== 'JOIN') return;
+    rawJoins++;
+    if (rawJoins % 25 === 0)
+      console.log(`[debug] raw JOINs so far: ${rawJoins}`);
+  });
+  client.onConnect(() => console.log('[debug] irc connected'));
+  return new TwitchAdapter(client, options);
 }
