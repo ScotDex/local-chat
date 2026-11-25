@@ -11,4 +11,9 @@ services:
       - ${SSL_DIR:?Set SSL_DIR in .env to the folder holding the certificate}:/app/ssl:ro
     ports:
       - '8443:3000'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
     stop_grace_period: 15s

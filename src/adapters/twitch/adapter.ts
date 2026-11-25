@@ -233,7 +233,8 @@ export class TwitchAdapter implements PlatformAdapter {
 
   #probe(channel: string): void {
     const watch = this.#watches.get(channel);
-    if (!this.#openProbe || !watch || watch.detector.seen || watch.probe) return;
+    if (!this.#openProbe || !watch || watch.detector.seen || watch.probe)
+      return;
 
     console.log(`[twitch] ${channel}: no viewer list yet, opening a probe`);
     const client = this.#openProbe(channel);

@@ -9,6 +9,8 @@ const KNOWN_BOTS = [
   'soundalerts',
   'kofistreambot',
   'botrixoficial',
+  'botrix',
+  'pokemoncommunitygame',
   'tangiabot',
   'frostytools',
   'eve2twitch',
