@@ -9,21 +9,26 @@ import { Presence } from './presence.ts';
 import { createTwitchAdapter } from './adapters/twitch/adapter.ts';
 import { isKnownBot } from './bots.ts';
 import { EmoteCache } from './emotes/cache.ts';
+import { createKickAdapter } from './adapters/kick/adapter.ts';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 const config = loadConfig(process.env);
 const startedAt = Date.now();
-
+const kick = createKickAdapter(config.kick, isKnownBot);
 const adapters = [
   createTwitchAdapter({ isKnownBot, emotes: new EmoteCache() }),
+  kick
 ];
 const presence = new Presence();
 const registry = new ChannelRegistry(adapters, {
   onLeave: (platform, channel) => presence.forget(platform, channel),
 });
 
-const app = createHttpApp({ startedAt });
+const app = createHttpApp({
+  startedAt,
+  kickWebhook: (headers, rawBody) => kick.handleWebhook(headers, rawBody),
+});
 const httpServer = config.tls
   ? createHttpsServer(
       {
