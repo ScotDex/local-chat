@@ -18,7 +18,7 @@ const startedAt = Date.now();
 const kick = createKickAdapter(config.kick, isKnownBot);
 const adapters = [
   createTwitchAdapter({ isKnownBot, emotes: new EmoteCache() }),
-  kick
+  kick,
 ];
 const presence = new Presence();
 const registry = new ChannelRegistry(adapters, {
