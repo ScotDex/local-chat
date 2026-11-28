@@ -184,6 +184,8 @@ function syncRoster() {
 const channels = [];
 if (settings.twitch)
   channels.push({ platform: 'twitch', channel: settings.twitch });
+if (settings.kick)
+  channels.push({ platform: 'kick', channel: String(settings.kick) });
 
 if (channels.length === 0) {
   systemLine('No channel set. Add ?channel=yourname to the URL.');

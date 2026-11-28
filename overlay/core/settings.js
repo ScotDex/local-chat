@@ -6,7 +6,7 @@
  * Everything an overlay URL can set. Null means "not set: use the skin's default".
  * @typedef {object} Settings
  * @property {string | null} twitch Twitch channel, normalised.
- * @property {number | null} kick Kick chatroom ID.
+ * @property {number | null} kick Kick broadcaster user ID.
  * @property {string | null} youtube YouTube channel ID (UC…).
  * @property {number} maxMessages
  * @property {boolean} roster

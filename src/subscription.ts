@@ -32,7 +32,7 @@ export function parseSubscription(input: unknown): SubscriptionResult {
         return fail('Invalid Twitch channel name');
       return { ok: true, value: { platform: 'twitch', channel: name } };
     }
-        case 'kick': {
+    case 'kick': {
       const id = channel.trim();
       if (!KICK_BROADCASTER_ID.test(id) || !Number.isSafeInteger(Number(id)))
         return fail('Invalid Kick channel ID');
