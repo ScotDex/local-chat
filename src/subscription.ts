@@ -10,6 +10,7 @@ export type SubscriptionResult =
   | { readonly ok: false; readonly error: string };
 
 const TWITCH_CHANNEL = /^[a-z0-9_]{1,25}$/;
+const KICK_BROADCASTER_ID = /^[1-9][0-9]{0,15}$/;
 
 function fail(error: string): SubscriptionResult {
   return { ok: false, error };
@@ -31,7 +32,12 @@ export function parseSubscription(input: unknown): SubscriptionResult {
         return fail('Invalid Twitch channel name');
       return { ok: true, value: { platform: 'twitch', channel: name } };
     }
-    case 'kick':
+        case 'kick': {
+      const id = channel.trim();
+      if (!KICK_BROADCASTER_ID.test(id) || !Number.isSafeInteger(Number(id)))
+        return fail('Invalid Kick channel ID');
+      return { ok: true, value: { platform: 'kick', channel: id } };
+    }
     case 'youtube':
       return fail(`${platform} is not supported yet`);
     default:

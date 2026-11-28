@@ -20,6 +20,23 @@ test('rejects Twitch names with invalid characters', () => {
   assert.equal(result.ok, false);
 });
 
+test('accepts a Kick broadcaster ID and trims it', () => {
+  assert.deepEqual(parseSubscription({ platform: 'kick', channel: ' 123 ' }), {
+    ok: true,
+    value: { platform: 'kick', channel: '123' },
+  });
+});
+
+test('rejects Kick channels that are not a positive whole-number ID', () => {
+  for (const channel of ['someone', '0', '012', '-5', '1.5', '9'.repeat(17)]) {
+    assert.equal(
+      parseSubscription({ platform: 'kick', channel }).ok,
+      false,
+      channel,
+    );
+  }
+});
+
 test('rejects Twitch names that are too long', () => {
   const result = parseSubscription({
     platform: 'twitch',
@@ -37,10 +54,10 @@ test('rejects an empty channel', () => {
 
 test('reports platforms that are not supported yet', () => {
   assert.deepEqual(
-    parseSubscription({ platform: 'kick', channel: 'someone' }),
+    parseSubscription({ platform: 'youtube', channel: 'someone' }),
     {
       ok: false,
-      error: 'kick is not supported yet',
+      error: 'youtube is not supported yet',
     },
   );
 });
